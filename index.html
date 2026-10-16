@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>FlappyType - Neon Typing & Flying Arcade Game</title>
+    <meta name="description" content="FlappyType is an exhilarating arcade typing game combining Flappy Bird flight mechanics with high-speed typing, combo multipliers, funny phrase combos, and retro synthwave audio." />
+    <meta property="og:title" content="FlappyType - Neon Typing & Flying Arcade Game" />
+    <meta property="og:description" content="Dodge neon obstacles, speed-type hilarious words, and reach peak WPM in this synthwave arcade experience!" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600;700&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./style.css" />
+    <!-- JSZip for exporting standalone offline game package -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  </head>
+  <body>
+    <div id="game-app">
+      <!-- TOP NAVIGATION & STATUS DASHBOARD -->
+      <header id="game-dashboard">
+        <div class="dash-left">
+          <div class="game-logo">
+            <span class="logo-flappy">FLAPPY</span><span class="logo-type">TYPE</span>
+            <span class="badge-version">v1.2</span>
+          </div>
+          <div class="difficulty-tag" id="current-diff-display">MEDIUM</div>
+        </div>
+
+        <div class="dash-center stats-grid">
+          <!-- CURRENT SCORE & BEST -->
+          <div class="stat-card score-card">
+            <span class="stat-label">SCORE</span>
+            <span class="stat-value" id="hud-score">0</span>
+            <span class="stat-sub">BEST: <strong id="hud-best-score">0</strong></span>
+          </div>
+
+          <!-- TYPING WPM -->
+          <div class="stat-card">
+            <span class="stat-label">SPEED</span>
+            <div class="stat-row">
+              <span class="stat-value neon-cyan" id="hud-wpm">0</span>
+              <span class="stat-unit">WPM</span>
+            </div>
+            <span class="stat-sub">PEAK: <span id="hud-peak-wpm">0</span></span>
+          </div>
+
+          <!-- ACCURACY -->
+          <div class="stat-card">
+            <span class="stat-label">ACCURACY</span>
+            <div class="stat-row">
+              <span class="stat-value neon-purple" id="hud-accuracy">100%</span>
+            </div>
+            <span class="stat-sub"><span id="hud-words-count">0</span> WORDS</span>
+          </div>
+
+          <!-- COMBO MULTIPLIER -->
+          <div class="stat-card combo-card">
+            <span class="stat-label">COMBO</span>
+            <div class="stat-row">
+              <span class="stat-value neon-gold" id="hud-combo">1.0x</span>
+            </div>
+            <div class="combo-meter-bar">
+              <div class="combo-fill" id="hud-combo-fill"></div>
+            </div>
+          </div>
+
+          <!-- SHIELDS / SURVIVAL LIVES -->
+          <div class="stat-card shields-card">
+            <span class="stat-label">SHIELDS</span>
+            <div class="shields-row" id="hud-shields-container">
+              <!-- Dynamically rendered shield icons -->
+              <span class="shield-dot active"></span>
+              <span class="shield-dot active"></span>
+            </div>
+            <span class="stat-sub" id="hud-shield-status">ACTIVE</span>
+          </div>
+        </div>
+
+        <!-- RIGHT ACTION BUTTONS -->
+        <div class="dash-right">
+          <button id="btn-toggle-sound" class="icon-btn" title="Toggle Audio (Mute / Sound)" aria-label="Toggle Audio">
+            <svg id="icon-sound-on" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+            </svg>
+            <svg id="icon-sound-off" class="hidden" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <line x1="23" y1="9" x2="17" y2="15"></line>
+              <line x1="17" y1="9" x2="23" y2="15"></line>
+            </svg>
+          </button>
+          
+          <button id="btn-pause" class="icon-btn" title="Pause Game [P or Esc]" aria-label="Pause Game">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="6" y="4" width="4" height="16"></rect>
+              <rect x="14" y="4" width="4" height="16"></rect>
+            </svg>
+          </button>
+
+          <button id="btn-download-zip" class="action-btn-small" title="Download Standalone ZIP package">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span>Export ZIP</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- MAIN ARENA / CANVAS WRAPPER -->
+      <main id="arena-container">
+        <!-- Floating Canvas Element -->
+        <canvas id="game-canvas"></canvas>
+
+        <!-- FLOATING COMBAT TEXT CONTAINER -->
+        <div id="combat-feedback-layer"></div>
+
+        <!-- ACTIVE TYPING DOCK OVERLAY -->
+        <div id="typing-bay">
+          <div class="typing-dock-card" id="typing-dock">
+            <div class="dock-header">
+              <span class="dock-title">TYPE TO STRIKE & SCORE</span>
+              <span class="dock-streak-badge" id="dock-streak-badge">0 STREAK</span>
+            </div>
+
+            <!-- Target Word Letter-by-Letter display -->
+            <div class="word-display-box" id="word-display-box">
+              <div class="word-letters" id="target-word-letters">
+                <!-- Target word letters injected here -->
+                <span class="word-char current">R</span>
+                <span class="word-char">E</span>
+                <span class="word-char">A</span>
+                <span class="word-char">D</span>
+                <span class="word-char">Y</span>
+              </div>
+            </div>
+
+            <!-- Next Word In Queue Preview -->
+            <div class="queue-preview-row">
+              <span class="queue-label">UP NEXT:</span>
+              <span class="queue-word" id="queue-word-1">cyber</span>
+              <span class="queue-arrow">→</span>
+              <span class="queue-word" id="queue-word-2">turbo snail</span>
+            </div>
+
+            <!-- Flap Status / Mobile Indicator -->
+            <div class="mobile-flap-zone">
+              <button id="btn-mobile-flap" class="btn-flap-action" aria-label="Shift Flap">
+                <span class="flap-icon">🚀</span>
+                <span>FLAP KEY: [SHIFT]</span>
+                <span class="flap-hint">Press [SHIFT] to flap your bird!</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- HIDDEN INPUT CAPTURING FOCUS AUTOMATICALLY -->
+        <input 
+          type="text" 
+          id="keystroke-receptor" 
+          autocomplete="off" 
+          autocorrect="off" 
+          autocapitalize="off" 
+          spellcheck="false" 
+          aria-hidden="true" 
+        />
+
+        <!-- OVERLAY: START SCREEN -->
+        <div id="screen-start" class="game-overlay active">
+          <div class="modal-cyber-panel">
+            <div class="modal-banner">
+              <div class="neon-wings-icon">⚡</div>
+              <h1 class="game-title-giant">FLAPPY<span class="text-neon-pink">TYPE</span></h1>
+              <p class="game-subtitle">CYBERNETIC FLIGHT &bull; VELOCITY TYPING ARCADE</p>
+            </div>
+
+            <!-- HOW TO PLAY INTRO -->
+            <div class="rules-card">
+              <div class="rule-item">
+                <div class="rule-icon">🪽</div>
+                <div class="rule-text">
+                  <strong>FLAP TO SURVIVE: [SHIFT] KEY</strong>
+                  <span>Press <kbd>Shift</kbd> (Left or Right Shift) to flap your bird and glide through neon pipes. Space does not flap!</span>
+                </div>
+              </div>
+              <div class="rule-item">
+                <div class="rule-icon">⌨️</div>
+                <div class="rule-text">
+                  <strong>TYPE WORDS TO SCORE</strong>
+                  <span>Type continuous cyber words and funny phrases. Correct letters glow green, mistakes glow red!</span>
+                </div>
+              </div>
+              <div class="rule-item">
+                <div class="rule-icon">🔥</div>
+                <div class="rule-text">
+                  <strong>NO UNWANTED PAUSES</strong>
+                  <span>Type freely (including words with 'P') without pausing. Only <kbd>Esc</kbd> pauses if needed.</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- DIFFICULTY SELECTOR -->
+            <div class="difficulty-picker-section">
+              <span class="picker-label">SELECT DIFFICULTY</span>
+              <div class="difficulty-buttons">
+                <button class="diff-btn" data-diff="easy">
+                  <span class="diff-name">EASY</span>
+                  <span class="diff-info">3 Shields &bull; Wide Gaps &bull; Chill Speed</span>
+                </button>
+                <button class="diff-btn active" data-diff="medium">
+                  <span class="diff-name">MEDIUM</span>
+                  <span class="diff-info">2 Shields &bull; Balanced &bull; Fast Words</span>
+                </button>
+                <button class="diff-btn" data-diff="hard">
+                  <span class="diff-name">HARD</span>
+                  <span class="diff-info">1 Shield &bull; Narrow &bull; Intense Phrases</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- HIGH SCORE ROW -->
+            <div class="start-records-row">
+              <div class="record-item">
+                <span class="rec-label">EASY BEST</span>
+                <span class="rec-val" id="rec-easy">0</span>
+              </div>
+              <div class="record-item">
+                <span class="rec-label">MEDIUM BEST</span>
+                <span class="rec-val" id="rec-medium">0</span>
+              </div>
+              <div class="record-item">
+                <span class="rec-label">HARD BEST</span>
+                <span class="rec-val" id="rec-hard">0</span>
+              </div>
+            </div>
+
+            <!-- LAUNCH BUTTON -->
+            <button id="btn-start-game" class="btn-primary-neon">
+              <span class="btn-glow"></span>
+              <span class="btn-text">INITIALIZE RUN &bull; [SPACE / ENTER]</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- OVERLAY: PAUSE SCREEN -->
+        <div id="screen-pause" class="game-overlay hidden">
+          <div class="modal-cyber-panel pause-modal">
+            <h2 class="pause-title">RUN SUSPENDED</h2>
+            <p class="pause-sub">Take a breath. Your cyber bird is holding altitude.</p>
+
+            <div class="pause-stats-summary">
+              <div class="p-stat">
+                <span class="p-stat-lbl">CURRENT SCORE</span>
+                <span class="p-stat-val" id="pause-score">0</span>
+              </div>
+              <div class="p-stat">
+                <span class="p-stat-lbl">CURRENT WPM</span>
+                <span class="p-stat-val neon-cyan" id="pause-wpm">0</span>
+              </div>
+              <div class="p-stat">
+                <span class="p-stat-lbl">ACCURACY</span>
+                <span class="p-stat-val neon-purple" id="pause-accuracy">100%</span>
+              </div>
+            </div>
+
+            <div class="modal-buttons-column">
+              <button id="btn-resume-game" class="btn-primary-neon">
+                <span class="btn-text">RESUME MISSION &bull; [P]</span>
+              </button>
+              <button id="btn-restart-from-pause" class="btn-secondary-neon">
+                <span class="btn-text">RESTART RUN</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- OVERLAY: GAME OVER SCREEN -->
+        <div id="screen-gameover" class="game-overlay hidden">
+          <div class="modal-cyber-panel gameover-modal">
+            <div class="gameover-header">
+              <span class="critical-tag">SYSTEM FAILURE</span>
+              <h2 class="gameover-title">MISSION TERMINATED</h2>
+              <div id="gameover-high-badge" class="new-record-pill hidden">★ NEW HIGH SCORE ★</div>
+            </div>
+
+            <!-- SCORE HIGHLIGHT -->
+            <div class="final-score-box">
+              <span class="score-subtitle">TOTAL SCORE ACCRUED</span>
+              <div class="final-score-number" id="go-final-score">0</div>
+              <span class="cause-label" id="go-cause">COLLISION DETECTED</span>
+            </div>
+
+            <!-- RUN ANALYTICS TABLE -->
+            <div class="analytics-grid">
+              <div class="analytic-cell">
+                <span class="a-label">WORDS TYPED</span>
+                <span class="a-value neon-cyan" id="go-words">0</span>
+              </div>
+              <div class="analytic-cell">
+                <span class="a-label">PEAK SPEED</span>
+                <span class="a-value neon-cyan" id="go-peak-wpm">0 <small>WPM</small></span>
+              </div>
+              <div class="analytic-cell">
+                <span class="a-label">TYPING ACCURACY</span>
+                <span class="a-value neon-purple" id="go-accuracy">0%</span>
+              </div>
+              <div class="analytic-cell">
+                <span class="a-label">MAX COMBO</span>
+                <span class="a-value neon-gold" id="go-max-combo">1.0x</span>
+              </div>
+              <div class="analytic-cell">
+                <span class="a-label">SURVIVAL TIME</span>
+                <span class="a-value" id="go-time">00:00</span>
+              </div>
+              <div class="analytic-cell">
+                <span class="a-label">DIFFICULTY</span>
+                <span class="a-value" id="go-difficulty">MEDIUM</span>
+              </div>
+            </div>
+
+            <!-- BUTTONS -->
+            <div class="modal-buttons-row">
+              <button id="btn-play-again" class="btn-primary-neon flex-1">
+                <span class="btn-text">REDEPLOY &bull; [SPACE / ENTER]</span>
+              </button>
+              <button id="btn-back-to-menu" class="btn-secondary-neon">
+                <span class="btn-text">MENU</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <!-- FOOTER STATUS / TIPS -->
+      <footer id="game-footer">
+        <div class="footer-left">
+          <span class="key-hint"><kbd>Shift</kbd> to Flap Bird</span>
+          <span class="separator">&bull;</span>
+          <span class="key-hint">Type letters <kbd>A</kbd>-<kbd>Z</kbd> to Score</span>
+          <span class="separator">&bull;</span>
+          <span class="key-hint"><kbd>Esc</kbd> Pause</span>
+        </div>
+        <div class="footer-right">
+          <span class="footer-credit">FlappyType &copy; 2026 &bull; Pure HTML5 Canvas Arcade</span>
+        </div>
+      </footer>
+    </div>
+
+    <!-- MAIN GAME ENGINE SCRIPT -->
+    <script type="module" src="./script.js"></script>
+  </body>
+</html>

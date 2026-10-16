@@ -1,0 +1,6 @@
+{
+  "name": "FlappyType - Neon Typing & Flying Arcade Game",
+  "description": "FlappyType is a high-octane indie browser game blending Flappy Bird physics with continuous speed-typing, combo multipliers, funny phrase combos, and retro synthwave audio.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
